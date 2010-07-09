@@ -10,12 +10,9 @@ select STDOUT; $| = 1;
 
 use Uno::Card;
 use Uno::Hand;
+use Uno::Table;
 
 {
-	my @deck = Uno::CardFactory->deck;
-	use List::Util qw( shuffle );
-	@deck = shuffle(@deck);
-
 	my @players = (
 		{ name => "Alice" },
 		{ name => "Bob" },
@@ -34,8 +31,13 @@ use Uno::Hand;
 
 	# state of play:
 
-	# - top card on deck
-	my @discards;
+	# - deck, discards (incl. top card)
+	my $table = do {
+		my @deck = Uno::CardFactory->deck;
+		use List::Util qw( shuffle );
+		@deck = shuffle(@deck);
+		Uno::Table->new(\@deck);
+	};
 
 	# - uncollected penalties
 	my $uncollected_penalties = 0;
@@ -59,7 +61,7 @@ use Uno::Hand;
 		# In theory should deal from $to_play+1 round to $to_play... but makes
 		# no odds overall
 		for my $player (@players) {
-			my $card = next_card();
+			my $card = $table->next_card();
 			# print "$card -> $player->{name}\n";
 			$player->{hand}->push($card);
 		}
@@ -67,7 +69,7 @@ use Uno::Hand;
 
 	# The dealer effectively plays the first card
 	{
-		my $card = next_card();
+		my $card = $table->next_card();
 		print "Dealer turns over $card\n";
 		play_card($card);
 	}
@@ -79,7 +81,7 @@ use Uno::Hand;
 		# By this point we know that the card play is allowed
 		# and that the card has been removed from the player's hand, etc
 		# Change state accordingly
-		push @discards, $card;
+		$table->discard($card);
 
 		if ($card->is_colour_change and $say_colour) {
 			# print "$players[$to_play]{name} nominates $say_colour\n";
@@ -106,7 +108,7 @@ use Uno::Hand;
 
 	sub find_playable_cards {
 		my @cards = @_;
-		my $top = $discards[-1];
+		my $top = $table->top;
 
 		my @map = map { [ $_,0] } @cards;
 
@@ -159,8 +161,6 @@ use Uno::Hand;
 	}
 
 	sub next_turn {
-		my $top = $discards[-1];
-
 		for (;;) {
 			$to_play = ($to_play + @players + $direction) % @players;
 			if ($miss_a_go) {
@@ -176,21 +176,9 @@ use Uno::Hand;
 		# dump_all();
 	}
 
-	sub next_card {
-		# printf "next_card called, deck=%d, discards=%d\n", 0+@deck, 0+@discards;
-		return pop @deck if @deck;
-		if (@discards > 1) {
-			my $top = pop @discards;
-			@deck = reverse @discards;
-			@discards = $top;
-			return pop @deck;
-		}
-		die "next_card called with no cards";
-	}
-
 	sub dump_all {
-		printf "Deck (%d): %s\n", 0+@deck, join(" ", @deck);
-		printf "Discards (%d): %s\n", 0+@discards, join(" ", @discards);
+		#printf "Deck (%d): %s\n", 0+@deck, join(" ", @deck);
+		#printf "Discards (%d): %s\n", 0+@discards, join(" ", @discards);
 		for my $who (@players) {
 			my $h = $who->{hand};
 			printf "%s (%d): %s\n", $who->{name}, $h->score_value, $h->as_string;
@@ -200,8 +188,8 @@ use Uno::Hand;
 		print "to_play: $to_play\n";
 
 		my $n = 0;
-		$n += @deck;
-		$n += @discards;
+		#$n += @deck;
+		#$n += @discards;
 		$n += $_->{hand}->count for @players;
 		die "Cards missing! (found $n)" unless $n == 108;
 	}
@@ -233,7 +221,7 @@ use Uno::Hand;
 
 		if (not defined $play) {
 			my $n = $uncollected_penalties || 1;
-			my @c = map { next_card() } 1..$n;
+			my @c = map { $table->next_card() } 1..$n;
 			print "$who->{name} picks up";
 			print " $_" for @c;
 			print "\n";
