@@ -8,8 +8,10 @@ use integer;
 select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
+use Uno::Card;
+
 {
-	my @deck = whole_deck();
+	my @deck = Uno::CardFactory->deck;
 	use List::Util qw( shuffle );
 	@deck = shuffle(@deck);
 
@@ -75,24 +77,24 @@ select STDOUT; $| = 1;
 		# Change state accordingly
 		push @discards, $card;
 
-		if (is_colour_change($card) and $say_colour) {
+		if ($card->is_colour_change and $say_colour) {
 			# print "$players[$to_play]{name} nominates $say_colour\n";
 			$nominated_colour = $say_colour;
 		}
 
-		if (my $p = penalty_value($card)) {
+		if (my $p = $card->penalty_value) {
 			$uncollected_penalties += $p;
 			print "+$uncollected_penalties uncollected penalties\n";
 		}
 
-		if (is_change_direction($card)) {
+		if ($card->is_change_direction) {
 			$direction = -$direction;
 			print "Now playing ";
 			print($direction == 1 ? "to the left" : "to the right");
 			print "\n";
 		}
 		
-		if (is_miss_a_go($card)) {
+		if ($card->is_miss_a_go) {
 			++$miss_a_go;
 			print "Next player will miss a go\n";
 		}
@@ -107,10 +109,10 @@ select STDOUT; $| = 1;
 		if ($uncollected_penalties) {
 			# If there are uncollected penalties then the top card must be a
 			# penalty of that type
-			my $value = penalty_value($top);
+			my $value = $top->penalty_value;
 			# Can only play penalties that match
 			for my $c (@map) {
-				$c->[1] = 1 if penalty_value($c->[0]) == $value;
+				$c->[1] = 1 if $c->[0]->penalty_value == $value;
 			}
 			return @map;
 		}
@@ -121,15 +123,15 @@ select STDOUT; $| = 1;
 		for my $c (@map) {
 			my $card = $c->[0];
 
-			next if is_colour_change($card);
+			next if $card->is_colour_change;
 
-			if (is_colour_change($top)) {
+			if ($top->is_colour_change) {
 				# Can't match on symbol, only on colour
-				$c->[1] = 1 if not $nominated_colour or $nominated_colour eq colour_of($card);
+				$c->[1] = 1 if not $nominated_colour or $nominated_colour eq $card->colour_of;
 			} else {
 				# Can match on colour or symbol
-				$c->[1] = 1 if colour_of($card) eq colour_of($top);
-				$c->[1] = 1 if symbol_of($card) eq symbol_of($top);
+				$c->[1] = 1 if $card->colour_of eq $top->colour_of;
+				$c->[1] = 1 if $card->symbol_of eq $top->symbol_of;
 			}
 		}
 
@@ -137,7 +139,7 @@ select STDOUT; $| = 1;
 			# Nothing else playable, so +4s are allowed
 			for my $c (@map) {
 				my $card = $c->[0];
-				$c->[1] = 1 if is_colour_change($card) and penalty_value($card);
+				$c->[1] = 1 if $card->is_colour_change and $card->penalty_value;
 			}
 		}
 
@@ -145,7 +147,7 @@ select STDOUT; $| = 1;
 		{
 			for my $c (@map) {
 				my $card = $c->[0];
-				$c->[1] = 1 if is_colour_change($card) and not penalty_value($card);
+				$c->[1] = 1 if $card->is_colour_change and not $card->penalty_value;
 			}
 		}
 
@@ -202,7 +204,7 @@ select STDOUT; $| = 1;
 	sub hand_value {
 		my $hand = shift;
 		my $t = 0;
-		$t += score_value($_) for @$hand;
+		$t += $_->score_value for @$hand;
 		return $t;
 	}
 
@@ -243,7 +245,7 @@ select STDOUT; $| = 1;
 		}
 
 		# Otherwise, we have chosen a card to play
-		if (is_colour_change($play) and not $col) {
+		if ($play->is_colour_change and not $col) {
 			die "colour change played with no colour nominated";
 		}
 
@@ -284,46 +286,6 @@ select STDOUT; $| = 1;
 
 exit;
 
-sub whole_deck
-{
-	my @col = (
-		0,
-		(1..9, qw( > + s ))x2,
-	);
-	return (
-		(map { my $c = $_; map { $c.$_ } @col } qw( r g y b )),
-		(("**") x 4),
-		(("+4") x 4),
-	);
-}
-
-sub penalty_value
-{
-	local $_ = shift;
-	return 4 if $_ eq "+4";
-	return 2 if /\+$/;
-	return 0;
-}
-
-sub score_value
-{
-	local $_ = shift;
-	return 50 if $_ eq "**" or $_ eq "+4";
-	/(\d)$/ ? $1 : 20;
-}
-
-sub is_colour_change
-{
-	local $_ = shift;
-	$_ eq "**" or $_ eq "+4";
-}
-
-sub is_miss_a_go { $_[0] =~ /s$/ }
-sub is_change_direction { $_[0] =~ />$/ }
-
-sub symbol_of { substr($_[0], 1, 1) }
-sub colour_of { substr($_[0], 0, 1) }
-
 sub pick_card_to_play {
 	my @playable = @{ shift() };
 	my $can_pass = shift;
@@ -340,7 +302,7 @@ sub pick_card_to_play {
 
 	# TODO improve this
 	my $col;
-	$col = "r" if is_colour_change($play);
+	$col = "r" if $play->is_colour_change;
 
 	return ($play, $col);
 }
