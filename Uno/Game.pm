@@ -9,6 +9,7 @@ select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
 use Uno::Card;
+use Uno::Hand;
 
 {
 	my @deck = Uno::CardFactory->deck;
@@ -25,6 +26,9 @@ use Uno::Card;
 		# { name => "Gary" },
 		# { name => "Helen" },
 	);
+
+	$_->{hand} = Uno::Hand->new
+		for @players;
 
 	my $turns = 0;
 
@@ -57,7 +61,7 @@ use Uno::Card;
 		for my $player (@players) {
 			my $card = next_card();
 			# print "$card -> $player->{name}\n";
-			push @{ $player->{hand} }, $card;
+			$player->{hand}->push($card);
 		}
 	}
 
@@ -188,7 +192,8 @@ use Uno::Card;
 		printf "Deck (%d): %s\n", 0+@deck, join(" ", @deck);
 		printf "Discards (%d): %s\n", 0+@discards, join(" ", @discards);
 		for my $who (@players) {
-			printf "%s (%d): %s\n", $who->{name}, hand_value($who->{hand}), join(" ", @{ $who->{hand} });
+			my $h = $who->{hand};
+			printf "%s (%d): %s\n", $who->{name}, $h->score_value, $h->as_string;
 		}
 		print "uncollected_penalties: $uncollected_penalties\n";
 		print "direction: $direction\n";
@@ -197,15 +202,8 @@ use Uno::Card;
 		my $n = 0;
 		$n += @deck;
 		$n += @discards;
-		$n += @{ $_->{hand} } for @players;
+		$n += $_->{hand}->count for @players;
 		die "Cards missing! (found $n)" unless $n == 108;
-	}
-
-	sub hand_value {
-		my $hand = shift;
-		my $t = 0;
-		$t += $_->score_value for @$hand;
-		return $t;
 	}
 
 	for (;;) {
@@ -217,7 +215,7 @@ use Uno::Card;
 		my $who = $players[$to_play];
 
 		my $h = $who->{hand};
-		my @playable = find_playable_cards(@$h);
+		my @playable = find_playable_cards($h->cards);
 
 		print "$who->{name}'s hand:\n";
 		print "$_->[0] " for @playable;
@@ -239,7 +237,7 @@ use Uno::Card;
 			print "$who->{name} picks up";
 			print " $_" for @c;
 			print "\n";
-			push @$h, @c;
+			$h->push(@c);
 			$uncollected_penalties = 0;
 			next;
 		}
@@ -249,25 +247,16 @@ use Uno::Card;
 			die "colour change played with no colour nominated";
 		}
 
-		{
-			my $removed;
-			for (0..$#$h) {
-				$h->[$_] eq $play or next;
-				splice(@$h, $_, 1);
-				++$removed;
-				last;
-			}
-			$removed or die "Can't play $play, it's not in your hand";
-		}
+		$h->remove_card($play);
 
 		print "$who->{name} plays $play";
 		print " and nominates $col" if $col;
-		print " and declares 'Uno'" if @$h == 1;
+		print " and declares 'Uno'" if $h->count == 1;
 		print "\n";
 
 		play_card($play, $col);
 
-		if (not @$h) {
+		if (not $h->count) {
 			print "$who->{name} is out\n";
 			last;
 		}
@@ -277,8 +266,7 @@ use Uno::Card;
 
 	for my $who (@players) {
 		my $h = $who->{hand};
-		my $t = hand_value($h);
-		printf "%s scores %d (%s)\n", $who->{name}, $t, join(" ", @$h);
+		printf "%s scores %d (%s)\n", $who->{name}, $h->score_value, join(" ", $h->cards);
 	}
 
 	# dump_all();
