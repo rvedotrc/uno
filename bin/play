@@ -37,23 +37,25 @@ $g->end_of_game;
 exit;
 
 sub pick_card_to_play {
-	my @playable = @{ shift() };
+	my @map = @{ shift() };
 	my $can_pass = shift;
+
+	my @playable = map { $_->[0] } grep { $_->[1] } @map;
+	my @unplayable = map { $_->[0] } grep { !$_->[1] } @map;
 
 	# Something is playable
 	# TODO improve this :-)
-	my $play;
-	use List::Util qw( shuffle );
-	for (shuffle(0..$#playable)) {
-		$playable[$_][1] or next;
-		$play = $playable[$_][0];
-		splice(@playable, $_, 1);
-		last;
-	}
+	@playable = sort { $a->score_value <=> $b->score_value } @playable;
+	my $play = $playable[-1];
 
 	# TODO improve this
 	my $col;
-	$col = "r" if $play->is_colour_change;
+	if ($play->is_colour_change) {
+		my %n;
+		++$n{ $_->colour_of } for grep { not $_->is_colour_change } (@playable, @unplayable);
+		my @c = sort { $n{$a} <=> $n{$b} } keys %n;
+		$col = $c[-1] || 'r';
+	}
 
 	return ($play, $col);
 }
