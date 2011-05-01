@@ -26,6 +26,19 @@ __PACKAGE__->mk_accessors(qw(
 	game_over
 ));
 
+# TODO game variations to build in:
+
+# Forgetting to declare 'Uno'
+
+# If you're not missing your turn, and there are no uncollected penalties, and
+# you don't have any matching coloured cards, and you have both a +4 and a
+# colour change, are you allowed to play the +4?  Currently: yes.
+
+# Can you opt to pick up, even if there is a card you can play?  Currently:
+# yes.
+
+# Different types of decks
+
 sub new
 {
 	my $class = shift;
@@ -200,7 +213,7 @@ sub next_turn {
 
 	$self->debug($self->players->[$self->to_play]." to play");
 
-	$self->dump_all();
+	# $self->dump_all;
 }
 
 sub dump_all {
@@ -294,14 +307,15 @@ sub play_next_turn_with_callback {
 
 sub end_of_game {
 	my ($self) = @_;
+	$self->debug("=" x 80);
 	$self->debug("Game over");
 
 	for my $who (@{ $self->players }) {
 		my $h = $who->hand;
-		$self->debug(sprintf "%s scores %d (%s)", $who, $h->score_value, join(" ", $h->cards));
+		$self->debug(sprintf "%s scores %d (%s)", $who, $h->score_value, join(" ", $h->cards)||'no cards');
 	}
 
-	$self->dump_all;
+	# $self->dump_all;
 }
 
 1;

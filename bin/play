@@ -14,18 +14,16 @@ use Uno::Game;
 my $g;
 
 {
-	my @players;
-	push @players, Uno::Player->new({ name => $_ })
-		for
-			"Alice",
-			"Bob",
-			"Charles",
-			"Diana",
-			"Edward",
-			# "Fiona",
-			# "Gary",
-			# "Helen",
-			;
+	my @players = map { Uno::Player->new({ name => $_ }) }
+		"Alice",
+		"Bob",
+		"Charles",
+		"Diana",
+		"Edward",
+		# "Fiona",
+		# "Gary",
+		# "Helen",
+		;
 
 	$g = Uno::Game->new({ players => \@players });
 }
