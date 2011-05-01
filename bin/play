@@ -1,2 +1,63 @@
-#!/bin/bash
-exec perl -Ilib lib/Uno/Game.pm
+#!/usr/bin/perl
+# vi: set ts=4 sw=4 :
+
+use warnings;
+use strict;
+
+use lib "lib";
+
+select STDERR; $| = 1;
+select STDOUT; $| = 1;
+
+use Uno::Game;
+
+my $g;
+
+{
+	my @players;
+	push @players, Uno::Player->new({ name => $_ })
+		for
+			"Alice",
+			"Bob",
+			"Charles",
+			"Diana",
+			"Edward",
+			# "Fiona",
+			# "Gary",
+			# "Helen",
+			;
+
+	$g = Uno::Game->new({ players => \@players });
+}
+
+while (not $g->game_over) {
+	$g->play_next_turn_with_callback(\&pick_card_to_play);
+}
+
+$g->end_of_game;
+
+exit;
+
+sub pick_card_to_play {
+	my @playable = @{ shift() };
+	my $can_pass = shift;
+
+	# Something is playable
+	# TODO improve this :-)
+	my $play;
+	use List::Util qw( shuffle );
+	for (shuffle(0..$#playable)) {
+		$playable[$_][1] or next;
+		$play = $playable[$_][0];
+		splice(@playable, $_, 1);
+		last;
+	}
+
+	# TODO improve this
+	my $col;
+	$col = "r" if $play->is_colour_change;
+
+	return ($play, $col);
+}
+
+# eof play
