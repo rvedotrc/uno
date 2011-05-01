@@ -178,21 +178,31 @@ use Uno::Player;
 	}
 
 	sub dump_all {
-		#printf "Deck (%d): %s\n", 0+@deck, join(" ", @deck);
-		#printf "Discards (%d): %s\n", 0+@discards, join(" ", @discards);
+		print "dump_all:\n";
+
+		my $deck = $table->deck;
+		my $discards = $table->discards;
+		printf "Deck (%d): %s\n", 0+@$deck, join(" ", @$deck);
+		printf "Discards (%d): %s\n", 0+@$discards, join(" ", @$discards);
+
+		print "  players:\n";
 		for my $who (@players) {
 			my $h = $who->hand;
-			printf "%s (%d): %s\n", $who, $h->score_value, $h->as_string;
+			printf "    %s (%d): %s\n", $who, $h->score_value, $h->as_string;
 		}
-		print "uncollected_penalties: $uncollected_penalties\n";
-		print "direction: $direction\n";
-		print "to_play: $to_play\n";
+
+		print "  uncollected_penalties: $uncollected_penalties\n";
+		print "  direction: $direction\n";
+		print "  to_play: $players[$to_play]\n";
 
 		my $n = 0;
-		#$n += @deck;
-		#$n += @discards;
+		$n += @{ $table->deck };
+		$n += @{ $table->discards };
 		$n += $_->hand->count for @players;
+		print "  accounted for $n cards\n";
 		die "Cards missing! (found $n)" unless $n == 108;
+
+		print "end of dump_all\n";
 	}
 
 	for (;;) {
@@ -258,7 +268,7 @@ use Uno::Player;
 		printf "%s scores %d (%s)\n", $who, $h->score_value, join(" ", $h->cards);
 	}
 
-	# dump_all();
+	dump_all();
 }
 
 exit;
