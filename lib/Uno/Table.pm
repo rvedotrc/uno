@@ -6,19 +6,23 @@ use strict;
 
 package Uno::Table;
 
+use base 'Class::Accessor::Fast';
+__PACKAGE__->mk_accessors(qw( deck discards ));
+
 sub new
 {
-	my ($class, $deck) = @_;
-	bless {
-		deck => $deck,
-		discards => [],
-	}, $class;
+	my $class = shift;
+	my $self = $class->SUPER::new(@_);
+	$self->deck([])     unless $self->deck;
+	$self->discards([]) unless $self->discards;
+	$self;
 }
 
 sub next_card
 {
 	my ($self) = @_;
-	my ($deck, $discards) = @$self{qw( deck discards )};
+	my $deck = $self->deck;
+	my $discards = $self->discards;
 	# printf "next_card called, deck=%d, discards=%d\n", 0+@$deck, 0+@$discards;
 	return pop @$deck if @$deck;
 	if (@$discards > 1) {
@@ -33,13 +37,13 @@ sub next_card
 sub discard
 {
 	my ($self, $card) = @_;
-	push @{ $self->{discards} }, $card;
+	push @{ $self->discards }, $card;
 }
 
 sub top
 {
 	my ($self) = @_;
-	$self->{discards}[-1];
+	$self->discards->[-1];
 }
 
 1;

@@ -36,7 +36,7 @@ use Uno::Table;
 		my @deck = Uno::CardFactory->deck;
 		use List::Util qw( shuffle );
 		@deck = shuffle(@deck);
-		Uno::Table->new(\@deck);
+		Uno::Table->new({ deck => \@deck });
 	};
 
 	# - uncollected penalties

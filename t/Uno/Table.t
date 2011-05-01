@@ -11,7 +11,7 @@ use_ok 'Uno::Table';
 use_ok 'Uno::Card';
 
 my @deck = Uno::CardFactory->deck;
-my $table = Uno::Table->new(\@deck);
+my $table = Uno::Table->new({ deck => \@deck });
 
 is $table->top, undef, "nothing initially discarded";
 
