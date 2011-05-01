@@ -1,0 +1,2 @@
+#!/bin/bash
+exec perl -Ilib lib/Uno/Game.pm
