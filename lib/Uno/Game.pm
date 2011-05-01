@@ -11,21 +11,22 @@ select STDOUT; $| = 1;
 use Uno::Card;
 use Uno::Hand;
 use Uno::Table;
+use Uno::Player;
 
 {
-	my @players = (
-		{ name => "Alice" },
-		{ name => "Bob" },
-		{ name => "Charles" },
-		{ name => "Diana" },
-		{ name => "Edward" },
-		# { name => "Fiona" },
-		# { name => "Gary" },
-		# { name => "Helen" },
-	);
+	my @players;
 
-	$_->{hand} = Uno::Hand->new
-		for @players;
+	push @players, Uno::Player->new({ name => $_, hand => Uno::Hand->new })
+		for
+			"Alice",
+			"Bob",
+			"Charles",
+			"Diana",
+			"Edward",
+			# "Fiona",
+			# "Gary",
+			# "Helen",
+			;
 
 	my $turns = 0;
 
@@ -55,15 +56,15 @@ use Uno::Table;
 
 	# - whose turn
 	my $to_play = int rand @players;
-	print "$players[$to_play]{name} deals\n";
+	print "$players[$to_play] deals\n";
 
 	for (1..7) {
 		# In theory should deal from $to_play+1 round to $to_play... but makes
 		# no odds overall
 		for my $player (@players) {
 			my $card = $table->next_card();
-			# print "$card -> $player->{name}\n";
-			$player->{hand}->push($card);
+			# print "$card -> $player\n";
+			$player->hand->push($card);
 		}
 	}
 
@@ -84,7 +85,7 @@ use Uno::Table;
 		$table->discard($card);
 
 		if ($card->is_colour_change and $say_colour) {
-			# print "$players[$to_play]{name} nominates $say_colour\n";
+			# print "$players[$to_play] nominates $say_colour\n";
 			$nominated_colour = $say_colour;
 		}
 
@@ -164,14 +165,14 @@ use Uno::Table;
 		for (;;) {
 			$to_play = ($to_play + @players + $direction) % @players;
 			if ($miss_a_go) {
-				print "$players[$to_play]{name} misses a go\n";
+				print "$players[$to_play] misses a go\n";
 				--$miss_a_go;
 				next;
 			}
 			last;
 		}
 
-		print "$players[$to_play]{name} to play\n";
+		print "$players[$to_play] to play\n";
 
 		# dump_all();
 	}
@@ -180,8 +181,8 @@ use Uno::Table;
 		#printf "Deck (%d): %s\n", 0+@deck, join(" ", @deck);
 		#printf "Discards (%d): %s\n", 0+@discards, join(" ", @discards);
 		for my $who (@players) {
-			my $h = $who->{hand};
-			printf "%s (%d): %s\n", $who->{name}, $h->score_value, $h->as_string;
+			my $h = $who->hand;
+			printf "%s (%d): %s\n", $who, $h->score_value, $h->as_string;
 		}
 		print "uncollected_penalties: $uncollected_penalties\n";
 		print "direction: $direction\n";
@@ -190,7 +191,7 @@ use Uno::Table;
 		my $n = 0;
 		#$n += @deck;
 		#$n += @discards;
-		$n += $_->{hand}->count for @players;
+		$n += $_->hand->count for @players;
 		die "Cards missing! (found $n)" unless $n == 108;
 	}
 
@@ -202,10 +203,10 @@ use Uno::Table;
 		print "Turn #$turns\n";
 		my $who = $players[$to_play];
 
-		my $h = $who->{hand};
+		my $h = $who->hand;
 		my @playable = find_playable_cards($h->cards);
 
-		print "$who->{name}'s hand:\n";
+		print "$who\'s hand:\n";
 		print "$_->[0] " for @playable;
 		print "\n";
 		printf "%s ", ("  ", "--")[$_->[1]] for @playable;
@@ -222,7 +223,7 @@ use Uno::Table;
 		if (not defined $play) {
 			my $n = $uncollected_penalties || 1;
 			my @c = map { $table->next_card() } 1..$n;
-			print "$who->{name} picks up";
+			print "$who picks up";
 			print " $_" for @c;
 			print "\n";
 			$h->push(@c);
@@ -237,7 +238,7 @@ use Uno::Table;
 
 		$h->remove_card($play);
 
-		print "$who->{name} plays $play";
+		print "$who plays $play";
 		print " and nominates $col" if $col;
 		print " and declares 'Uno'" if $h->count == 1;
 		print "\n";
@@ -245,7 +246,7 @@ use Uno::Table;
 		play_card($play, $col);
 
 		if (not $h->count) {
-			print "$who->{name} is out\n";
+			print "$who is out\n";
 			last;
 		}
 	}
@@ -253,8 +254,8 @@ use Uno::Table;
 	print "Game over\n";
 
 	for my $who (@players) {
-		my $h = $who->{hand};
-		printf "%s scores %d (%s)\n", $who->{name}, $h->score_value, join(" ", $h->cards);
+		my $h = $who->hand;
+		printf "%s scores %d (%s)\n", $who, $h->score_value, join(" ", $h->cards);
 	}
 
 	# dump_all();
